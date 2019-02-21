@@ -30,7 +30,7 @@ class Sql {
 
 	private function bindParam($statement, $key, $value)
 	{
-		$statement->bindParam($key, $value);
+			$statement->bindParam($key, $value);
 	}
 
 	public function query($rawQuery, $params = array())
