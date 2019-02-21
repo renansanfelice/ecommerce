@@ -52,6 +52,19 @@ class User extends Model {
               exit;
           }
     }
+
+    public static function logout()
+    {
+        $_SESSION[User::SESSION] = NULL;
+    }
+
+    public static function listAll()
+    {
+        $sql = new Sql();
+
+        return $sql->select("SELECT * FROM tb_users atb_persons INNER JOIN tb_persons b USING(idperson) ORDER BY b.desperson");
+
+    }
 }
 
  ?>
