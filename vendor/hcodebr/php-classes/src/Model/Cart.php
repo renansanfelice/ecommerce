@@ -6,6 +6,7 @@ use \Hcode\DB\Sql;
 use \Hcode\Model;
 use \Hcode\Mailer;
 use \Hcode\Model\User;
+use \Hcode\Model\Product;
 
 class Cart extends Model {
 
@@ -99,5 +100,53 @@ class Cart extends Model {
 
 	}
 
+	public function addProduct(Product $product) 
+	{
+		$sql = new Sql();
+
+		$sql->query("INSERT INTO tb_cartsproducts (idcart, idproduct) VALUES(:idcart, :idproduct)", [
+			':idcart' => $this->getidcart(),
+			'idproduct' => $product->getidproduct()
+		]);
+	}
+
+	public function removeProduct(Product $product, $all = false) 
+	{
+		$sql = new Sql();
+
+		if($all) {
+
+			$sql->query("UPDATE tb_cartsproducts set dtremoved = now() WHERE idcart = :idcart and idproduct = :idproduct and dtremoved IS null ", [
+				':idcart' => $this->getidcart(),
+				'idproduct' => $product->getidproduct()
+
+			]);
+		} else {
+
+			$sql->query("UPDATE tb_cartsproducts set dtremoved = now() WHERE idcart = :idcart and idproduct = :idproduct and dtremoved IS null limit 1", [
+				':idcart' => $this->getidcart(),
+				'idproduct' => $product->getidproduct()
+			]);
+
+		}
+
+	}
+
+	public function getProducts()
+	{
+
+		$sql = new Sql();
+
+		$rows = $sql->select("SELECT b.idproduct, b.desproduct, b.vlprice, b.vlwidth, b.vllength, b.vlheight, b.vlweight, b.desurl, count(*) as nrqtde, sum(vlprice) as vltotal
+						from tb_cartsproducts a 
+						inner join tb_products b on a.idproduct = b.idproduct 
+						WHERE A.idcart = :idcart AND a.dtremoved is null 
+						group by b.idproduct, b.desproduct, b.vlprice, b.vlwidth, b.vllength, b.vlheight, b.vlweight, b.desurl
+						order by b.desproduct", [
+							':idcart' => $this->getidcart()
+						]);
+
+			return Product::checkList($rows);
+	}
 
 }
