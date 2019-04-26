@@ -11,6 +11,7 @@ use \Hcode\Model\Product;
 class Cart extends Model {
 
 	const SESSION = "Cart";
+	const SESSION_ERROR = "CartError";
 
 	public static function getFromSession()
 	{
@@ -149,4 +150,102 @@ class Cart extends Model {
 			return Product::checkList($rows);
 	}
 
+	public function getProductsTotals()
+	{
+		$sql = new Sql();
+
+		$results = $sql->select("SELECT SUM(vlprice) as vlprice, sum(vlwidth) as vlwidth, sum(vlheight) as vlheight, sum(vllength) as vllength, sum(vlweight) as vlweight, count(*) as nrqtde
+			from tb_products a 
+			inner join tb_cartsproducts b on a.idproduct = b.idproduct
+			where b.idcart = :idcart and dtremoved is null 
+			", [
+				':idcart' => $this->getidcart()
+			]);
+
+		if (count($results) > 0) {
+			return $results[0];
+		} else {
+			return [];
+		}
+
+	}
+
+	public function setFreight($nrzipcode) 
+	{
+
+		$nrzipcode = str_replace('-', '', $nrzipcode);
+
+		$totals = $this->getProductsTotals();
+
+		if($totals['nrqtde'] > 0) {
+
+			if ($totals['vlheight'] < 2) $totals['vlheight'] = 2;
+			if ($totals['vllength'] < 16) $totals['vllength'] = 16;
+
+			$qs = http_build_query([
+					'nCdEmpresa' => '',
+					'sDsSenha' => '',
+					'nCdServico' => '40010',
+					'sCepOrigem' => '15085480',
+					'sCepDestino' => $nrzipcode,
+					'nVlPeso' => $totals['vlweight'],
+					'nCdFormato' => '1',
+					'nVlComprimento' => $totals['vllength'],
+					'nVlAltura' => $totals['vlheight'],
+					'nVlLargura' => $totals['vlwidth'],
+					'nVlDiametro' => '0',
+					'sCdMaoPropria' => 'S',
+					'nVlValorDeclarado' => $totals['vlprice'],
+					'sCdAvisoRecebimento' => 'S'
+
+			]);
+			
+			$xml = simplexml_load_file("http://ws.correios.com.br/calculador/CalcPrecoPrazo.asmx/CalcPrecoPrazo?".$qs);
+
+			$result = $xml->Servicos->cServico;
+
+			if($result->MsgErro != '') {
+
+				Cart::setMsgError($result->MsgErro);
+			} else {
+				Cart::clearMsgError();
+			}
+
+			$this->setnrdays($result->PrazoEntrega);
+			$this->setvlfreight(Cart::formatValueToDecimal($result->Valor));
+			$this->setdeszipcode($nrzipcode);
+
+			$this->save();
+
+			return $result;
+
+		} else {
+
+		}
+	}
+
+	public static function formatValueToDecimal($value)
+	{	
+		$value = str_replace('.', '', $value);
+		return str_replace(',', '.', $value); 
+	}
+
+	public static function setMsgError($msg)
+	{
+		$_SESSEION[Cart::SESSION_ERROR] = $msg;
+	}
+
+	public static function getMsgError()
+	{
+		$msg = (isset($_SESSEION[Cart::SESSION_ERROR])) ? $_SESSEION[Cart::SESSION_ERROR] : '';
+
+		Cart::clearMsgError();
+
+		return $msg;
+	}
+
+	public static function clearMsgError()
+	{
+		$_SESSEION[Cart::SESSION_ERROR] = NULL;
+	}
 }
