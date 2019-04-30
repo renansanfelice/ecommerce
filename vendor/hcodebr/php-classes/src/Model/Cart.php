@@ -47,7 +47,6 @@ class Cart extends Model {
 
 			} 
 		}
-
 		return $cart;
 	}	
 
@@ -98,7 +97,6 @@ class Cart extends Model {
 		]);
 
 		$this->setData($results[0]);
-
 	}
 
 	public function addProduct(Product $product) 
@@ -109,6 +107,8 @@ class Cart extends Model {
 			':idcart' => $this->getidcart(),
 			'idproduct' => $product->getidproduct()
 		]);
+
+		$this->getCalculateTotal();
 	}
 
 	public function removeProduct(Product $product, $all = false) 
@@ -130,7 +130,7 @@ class Cart extends Model {
 			]);
 
 		}
-
+		$this->getCalculateTotal();
 	}
 
 	public function getProducts()
@@ -172,7 +172,6 @@ class Cart extends Model {
 
 	public function setFreight($nrzipcode) 
 	{
-
 		$nrzipcode = str_replace('-', '', $nrzipcode);
 
 		$totals = $this->getProductsTotals();
@@ -247,5 +246,30 @@ class Cart extends Model {
 	public static function clearMsgError()
 	{
 		$_SESSEION[Cart::SESSION_ERROR] = NULL;
+	}
+
+	public function updateFreight()
+	{
+		if ($this->getdeszipcode() != '') {
+
+			$this->setFreight($this->getdeszipcode());
+		} 
+	}
+
+	public function getValues()
+	{
+		$this->getCalculateTotal();
+
+		return parent::getValues();
+	}
+
+	public function getCalculateTotal()
+	{
+		$this->updateFreight();
+
+		$totals = $this->getProductsTotals();
+
+		$this->setvlsubtotal($totals['vlprice']);
+		$this->setvltotal($totals['vlprice'] + $this->getvlfreight());
 	}
 }
