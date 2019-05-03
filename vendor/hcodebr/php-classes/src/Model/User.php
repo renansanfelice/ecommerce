@@ -12,7 +12,8 @@ class User extends Model {
   const SECRET = "EmporiumDigital_";
   const CHAVE = "RECUPERAR_SENHAS";
   const ENCRYPT_METHOD = "AES-256-CBC";
-  const USER_ERROR = "UserError";
+  const ERROR = "UserError";
+  const ERROR_REGISTER = "UserErrorRegister";
 
 
     public static function getFromSession()
@@ -282,12 +283,12 @@ class User extends Model {
 
     public static function setError($msg)
     {
-      $_SESSEION[User::USER_ERROR] = $msg;
+      $_SESSION[User::ERROR] = $msg;
     }
 
     public static function getError()
     {
-      $msg = (isset($_SESSEION[User::USER_ERROR])) ? $_SESSEION[User::USER_ERROR] : '';
+      $msg = (isset($_SESSION[User::ERROR]) && $_SESSION[User::ERROR]) ? $_SESSION[User::ERROR] : '';
 
       User::clearError();
 
@@ -296,7 +297,7 @@ class User extends Model {
 
     public static function clearError()
     {
-      $_SESSEION[User::USER_ERROR] = NULL;
+      $_SESSION[User::ERROR] = NULL;
     }
 
     public static function getdespasswordHash($password)
@@ -304,6 +305,37 @@ class User extends Model {
       return password_hash($password, PASSWORD_DEFAULT, [
           'cost'=>12
       ]);
+    }
+
+    public static function setErrorRegister($msg)
+    {
+      $_SESSION[User::ERROR_REGISTER] = $msg;
+    }
+
+    public static function getErrorRegister()
+    {
+      $msg = (isset($_SESSION[User::ERROR_REGISTER]) && $_SESSION[User::ERROR_REGISTER]) ? $_SESSION[User::ERROR_REGISTER] : '';
+
+      User::clearErrorRegister();
+
+      return $msg;
+    }
+
+    public static function clearErrorRegister()
+    {
+      $_SESSION[User::ERROR_REGISTER] = NULL;
+    }
+
+    public static function ckeckLoginExist($login)
+    {
+
+      $sql = new Sql();
+
+      $results = $sql->select("select * from tb_users where deslogin = :deslogin", [
+        'deslogin' =>$login
+      ]);
+
+      return (count($results) > 0);
     }
 
 
